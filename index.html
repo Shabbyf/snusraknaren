@@ -68,6 +68,8 @@ img{max-width:100%}
 
 /* header */
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:6px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand img{width:40px;height:40px;border-radius:11px;flex:none}
 .top h1{margin:0;font-size:1.25rem;font-weight:700;letter-spacing:-.01em}
 .top .sub{font-size:.85rem;color:var(--dim)}
 .iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--hair);background:var(--leaf);display:grid;place-items:center;flex:none}
@@ -152,16 +154,19 @@ img{max-width:100%}
 .streak span{font-size:.82rem;color:var(--dim);line-height:1.3}
 .streak.hot b{color:var(--resin)}
 
-.aw-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 6px}
-.aw{display:grid;justify-items:center;align-content:start;gap:4px;text-align:center;min-width:0}
-.aw svg{width:42px;height:42px}
-.aw svg circle{fill:none;stroke:var(--ring-off);stroke-width:1.3}
-.aw.got svg circle{stroke:var(--pine)}
-.aw.got svg circle.top{stroke:var(--resin)}
-.aw small{font-size:.8rem;font-weight:600;line-height:1.1}
+.aw-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.aw{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;min-width:0}
+.aw .tx{display:grid;min-width:0}
+.aw svg{width:34px;height:34px}
+.aw .mt{fill:var(--sink)}
+.aw .mt-fill{fill:var(--ring-off)}
+.aw .alt-line{stroke:var(--dim);stroke-width:1;stroke-dasharray:2 2;opacity:.6}
+.aw.got .mt-fill{fill:var(--pine)}
+.aw.got .alt-line{stroke:var(--resin);opacity:1;stroke-dasharray:none;stroke-width:1.5}
+.aw small{font-size:.9rem;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aw:not(.got) small{color:var(--dim);font-weight:500}
-.aw em{font-style:normal;font-size:.72rem;color:var(--dim)}
-.aw .n{font-size:.72rem;font-weight:700;color:var(--resin)}
+.aw em{font-style:normal;font-size:.78rem;color:var(--dim)}
+.aw .n{font-size:.85rem;font-weight:700;color:var(--resin)}
 
 .table{display:grid;grid-template-columns:1fr auto auto;gap:8px 18px;font-size:.95rem;align-items:baseline}
 .table .h{font-size:.8rem;color:var(--dim)}
@@ -223,7 +228,7 @@ img{max-width:100%}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:29}
 
-@media (max-width:370px){ .aw-grid{grid-template-columns:repeat(4,1fr)} .wrap{gap:24px} }
+@media (max-width:370px){ .aw-grid{grid-template-columns:1fr} .wrap{gap:24px} }
 @media (prefers-reduced-motion: reduce){
   .big,.rings .grow,.share .bar i,.sheet,.scrim,.toast{transition:none}
   .big.flash .pulse,.rings.pulse svg{animation:none}
@@ -233,9 +238,12 @@ img{max-width:100%}
 <body>
 <div class="wrap">
   <header class="top">
-    <div>
+    <div class="brand">
+      <img src="icons/logo.svg" alt="" width="40" height="40">
+      <div>
       <h1 id="title">Snusräknaren</h1>
       <div class="sub" id="subtitle">Laddar…</div>
+      </div>
     </div>
     <button class="iconbtn" id="openSettings" aria-label="Pris och inställningar" aria-expanded="false" aria-controls="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
@@ -248,7 +256,7 @@ img{max-width:100%}
       <div class="center">
         <span class="what" id="pzLabel">Pausklocka</span>
         <div class="clock num" id="pzClock" role="timer" aria-live="off">–</div>
-        <span class="lvl none" id="pzBadgeName">Ingen ring än</span>
+        <span class="lvl none" id="pzBadgeName">Vid foten</span>
       </div>
     </div>
     <p class="next" id="pzSub">Klockan startar vid ditt första tryck.</p>
@@ -301,7 +309,7 @@ img{max-width:100%}
   </section>
 
   <section class="sec">
-    <h2>Årsringar <small id="awTotal"></small></h2>
+    <h2>Etapper <small id="awTotal"></small></h2>
     <div class="aw-grid" id="awGrid"></div>
   </section>
 
@@ -574,8 +582,8 @@ img{max-width:100%}
 
   // ---------- pauses, levels, streaks ----------
   const LEVELS = [
-    {m:15,n:'Frö'},{m:30,n:'Grodd'},{m:60,n:'Planta'},{m:120,n:'Kvist'},{m:180,n:'Buske'},
-    {m:240,n:'Ungträd'},{m:360,n:'Träd'},{m:480,n:'Lund'},{m:720,n:'Skog'},{m:1440,n:'Urskog'}
+    {m:15,n:'Fjällstugan'},{m:30,n:'Björkskogen'},{m:60,n:'Trädgränsen'},{m:120,n:'Kalfjället'},{m:180,n:'Blockterrängen'},
+    {m:240,n:'Snöfältet'},{m:360,n:'Glaciären'},{m:480,n:'Toppkammen'},{m:720,n:'Sydtoppen'},{m:1440,n:'Nordtoppen'}
   ];
   const MIN = 60000;
   const hm = (v, dflt) => { const x = String(v||dflt).split(':').map(Number); return (x[0]||0)*60 + (x[1]||0); };
@@ -670,11 +678,11 @@ img{max-width:100%}
 
     const next = LEVELS[lvl+1];
     if (!ps) $('pzSub').textContent = `Klockan startar vid ditt första tryck.`;
-    else if (next) $('pzSub').innerHTML = `Nästa ring, <b>${next.n}</b>, om ${fmtDur(next.m*MIN - live + 59999)}`;
-    else $('pzSub').innerHTML = `<b>Alla tio ringar.</b> Varje minut nu är ren bonus.`;
+    else if (next) $('pzSub').innerHTML = `Nästa etapp, <b>${next.n}</b>, om ${fmtDur(next.m*MIN - live + 59999)}`;
+    else $('pzSub').innerHTML = `<b>Du står på toppen.</b> Varje minut nu är ren bonus.`;
     drawRings(live, lvl, goal);
     const nm = $('pzBadgeName');
-    nm.textContent = lvl >= 0 ? LEVELS[lvl].n : 'Ingen ring än';
+    nm.textContent = lvl >= 0 ? LEVELS[lvl].n : 'Vid foten';
     nm.classList.toggle('none', lvl < 0);
 
     $('stBestV').textContent = best ? fmtDur(Math.max(best, live), true) : (live ? fmtDur(live, true) : '–');
@@ -689,7 +697,7 @@ img{max-width:100%}
     if (ps){
       if (!liveRef || liveRef.start !== ps.at){ liveRef = { start:ps.at, lvl, recordShown: best>0 && live>best, goalShown: live>=goal }; }
       else {
-        if (lvl > liveRef.lvl){ liveRef.lvl = lvl; const L = LEVELS[lvl]; toast(`Ny ring: ${L.n}. ${fmtDur(L.m*MIN)} utan.`); popBadge(); if (L.m >= 60) confetti(); buzz([12,40,12,40,24]); full = true; }
+        if (lvl > liveRef.lvl){ liveRef.lvl = lvl; const L = LEVELS[lvl]; toast(`Ny etapp: ${L.n}. ${fmtDur(L.m*MIN)} utan.`); popBadge(); if (L.m >= 60) confetti(); buzz([12,40,12,40,24]); full = true; }
         if (!liveRef.recordShown && best >= 10*MIN && live > best){ liveRef.recordShown = true; toast(`Nytt rekord! Längre än ${fmtDur(best)}`); confetti(); buzz([20,40,20,40,40]); full = true; }
         if (!liveRef.goalShown && live >= goal){ liveRef.goalShown = true; toast(`Dagens mål klarat: ${fmtDur(goal)}`); popBadge(); buzz([15,30,15]); full = true; }
       }
@@ -699,41 +707,51 @@ img{max-width:100%}
   function popBadge(){ const b = $('rings'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
   // tree rings: one ring per level around the clock; the next ring grows in resin while you hold out
   let ringsKey = '';
+  const RINGS = { C:160, outer:156, inner:101 };
+  const ringR = i => RINGS.outer - i*(RINGS.outer-RINGS.inner)/(LEVELS.length-1);
+  // a contour line: closed, gently irregular loop, the same shape every time
+  function contourPath(r, seed){
+    const C = RINGS.C, N = 96, amp = 0.45 + 0.55*(r-RINGS.inner)/(RINGS.outer-RINGS.inner);
+    let d = '';
+    for (let i=0;i<=N;i++){
+      const a = i/N*2*Math.PI;
+      const w = 1 + amp*(0.035*Math.sin(3*a+seed) + 0.022*Math.sin(5*a+seed*1.7) + 0.015*Math.sin(2*a+seed*0.6));
+      d += (i ? ' L' : 'M') + (C + Math.cos(a-Math.PI/2)*r*w).toFixed(1) + ' ' + (C + Math.sin(a-Math.PI/2)*r*w).toFixed(1);
+    }
+    return d + ' Z';
+  }
   function drawRings(live, lvl, goal){
-    const svg = $('ringSvg'); const C = 160, R0 = 100, STEP = 6, W = 3.6;
-    const radius = i => R0 + i*STEP;
+    const svg = $('ringSvg'); const W = 3.4;
     const key = lvl + '|' + Math.round(goal/MIN);
     if (key !== ringsKey){
       ringsKey = key;
       let out = '';
       LEVELS.forEach((L,i)=>{
         const cls = i <= lvl ? ('done' + (i%2 ? ' alt' : '')) : 'off';
-        out += `<circle class="${cls}" cx="${C}" cy="${C}" r="${radius(i)}" stroke-width="${W}"/>`;
+        out += `<path class="${cls}" d="${contourPath(ringR(i), 1.3+i*0.07)}" fill="none" stroke-width="${W}" stroke-linejoin="round"/>`;
       });
       const ni = lvl + 1;
-      if (ni < LEVELS.length){
-        const r = radius(ni), len = 2*Math.PI*r;
-        out += `<circle id="growRing" class="grow" cx="${C}" cy="${C}" r="${r}" stroke-width="${W+1.4}" stroke-dasharray="${len.toFixed(2)}" stroke-dashoffset="${len.toFixed(2)}" transform="rotate(-90 ${C} ${C})"/>`;
-      }
-      // goal marker: a dot on the ring where today's goal falls
+      if (ni < LEVELS.length) out += `<path id="growRing" class="grow" d="${contourPath(ringR(ni), 1.3+ni*0.07)}" fill="none" stroke-width="${W+1.6}"/>`;
+      svg.innerHTML = out;
+      const g = document.getElementById('growRing');
+      if (g){ const len = g.getTotalLength(); g.setAttribute('stroke-dasharray', len.toFixed(1)); g.dataset.len = len; }
+      // goal marker: a cairn-dot on the contour where today's goal falls
       const gi = LEVELS.findIndex(L => goal <= L.m*MIN);
       if (gi >= 0){
         const lo = gi ? LEVELS[gi-1].m*MIN : 0, f = (goal-lo)/(LEVELS[gi].m*MIN-lo);
-        const a = -Math.PI/2 + f*2*Math.PI, r = radius(gi);
-        out += `<circle class="goal" cx="${(C+r*Math.cos(a)).toFixed(1)}" cy="${(C+r*Math.sin(a)).toFixed(1)}" r="4.2"><title>Dagens mål</title></circle>`;
+        const tmp = document.createElementNS('http://www.w3.org/2000/svg','path');
+        tmp.setAttribute('d', contourPath(ringR(gi), 1.3+gi*0.07)); svg.appendChild(tmp);
+        const pt = tmp.getPointAtLength(tmp.getTotalLength()*f); tmp.remove();
+        svg.insertAdjacentHTML('beforeend', `<circle class="goal" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4.4"><title>Dagens mål</title></circle>`);
       }
-      svg.innerHTML = out;
     }
     const g = document.getElementById('growRing');
     if (g){
       const ni = lvl + 1, lo = lvl >= 0 ? LEVELS[lvl].m*MIN : 0, hi = LEVELS[ni].m*MIN;
-      const f = Math.max(0, Math.min(1, (live-lo)/(hi-lo)));
-      const len = 2*Math.PI*radius(ni);
-      g.setAttribute('stroke-dashoffset', (len*(1-f)).toFixed(2));
+      const f = Math.max(0, Math.min(1, (live-lo)/(hi-lo))); const len = +g.dataset.len;
+      g.setAttribute('stroke-dashoffset', (len*(1-f)).toFixed(1));
     }
   }
-  function buzz(p){ if (navigator.vibrate) { try { navigator.vibrate(p); } catch(e){} } }
-
   function renderPauseDetails(all, goal, live, ps){
     const tk = today();
     // today's pauses chart
@@ -766,13 +784,16 @@ img{max-width:100%}
     all.forEach(g=>{ const l = levelOf(g.ms); if (l>=0) counts[l]++; });
     const ll = levelOf(live); if (ps && ll>=0) counts[ll]++;
     const total = counts.reduce((a,b)=>a+b,0);
-    $('awTotal').textContent = total ? `${total} pauser med ring` : 'Första ringen efter 15 min';
+    $('awTotal').textContent = total ? `${total} etapper klarade` : 'Första etappen efter 15 min';
     const grid = $('awGrid'); grid.innerHTML = '';
     LEVELS.forEach((L,i)=>{
-      let rings = '';
-      for (let k=0;k<=i;k++) rings += `<circle class="${k===i?'top':''}" cx="21" cy="21" r="${4+k*1.75}" stroke-width="1.1"/>`;
+      const h = 4 + (i+1)/LEVELS.length*30, y = 38 - h;
       const el = document.createElement('div'); el.className = 'aw' + (counts[i] ? ' got' : '');
-      el.innerHTML = `<svg viewBox="0 0 42 42" aria-hidden="true">${rings}</svg><small>${L.n}</small><em>${fmtDur(L.m*MIN)}</em>${counts[i] ? `<span class="n num">${counts[i]} st</span>` : ''}`;
+      el.innerHTML = `<svg viewBox="0 0 42 42" aria-hidden="true"><defs><clipPath id="cp${i}"><rect x="0" y="${y.toFixed(1)}" width="42" height="${h.toFixed(1)}"/></clipPath></defs>`
+        + `<path class="mt" d="M3 38 L15 15 L21 22 L28 6 L39 38 Z"/>`
+        + `<path class="mt-fill" d="M3 38 L15 15 L21 22 L28 6 L39 38 Z" clip-path="url(#cp${i})"/>`
+        + `<line class="alt-line" x1="2" x2="40" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/></svg>`
+        + `<div class="tx"><small>${L.n}</small><em>${fmtDur(L.m*MIN)}</em></div><span class="n num">${counts[i] ? counts[i] + ' st' : ''}</span>`;
       el.setAttribute('aria-label', `${L.n}, ${fmtDur(L.m*MIN)}: ${counts[i]} gånger`);
       grid.appendChild(el);
     });
