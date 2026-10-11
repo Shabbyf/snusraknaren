@@ -131,11 +131,11 @@ img{max-width:100%}
 .sec > h2 small{font-size:.82rem;font-weight:500;color:var(--dim)}
 .muted{color:var(--dim)}
 
-.today{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.today .net{font-size:2.3rem;font-weight:700;line-height:1;letter-spacing:-.02em}
-.today .net.pos{color:var(--pine)}
-.today .row{font-size:.92rem;color:var(--dim);display:flex;gap:4px 14px;flex-wrap:wrap}
-.today .row b{color:var(--ink);font-weight:600}
+.todaybox{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.todaybox .net{font-size:2.3rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.todaybox .net.pos{color:var(--pine)}
+.todaybox .row{font-size:.92rem;color:var(--dim);display:flex;gap:4px 14px;flex-wrap:wrap}
+.todaybox .row b{color:var(--ink);font-weight:600}
 .share{display:grid;gap:6px}
 .share .bar{height:8px;border-radius:4px;background:var(--ash-soft);overflow:hidden}
 .share .bar i{display:block;height:100%;background:var(--pine);transition:width .4s ease}
@@ -277,7 +277,7 @@ img{max-width:100%}
 
   <section class="sec" aria-live="polite">
     <h2>Idag <small id="planChip"></small></h2>
-    <div class="today">
+    <div class="todaybox">
       <div class="net num" id="netToday">0 kr</div>
       <div class="row"><span>Sparat <b class="num" id="savedToday">0 kr</b></span><span>Spenderat <b class="num" id="spentToday">0 kr</b></span></div>
     </div>
