@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Snusräknaren</title>
+<meta name="description" content="Räknar vad du sparar när du avstår snus eller cigaretter och belönar längre pauser.">
+<meta name="theme-color" content="#e7ebe4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1714" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Snusräknaren">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one column for the thumb. The tree-ring dial is the only loud thing; everything below is quiet text on the page, separated by space and hairlines, not boxes. */
+:root{
+  color-scheme:light;
+  --paper:#e7ebe4;      /* lichen grey */
+  --leaf:#f4f6f1;       /* raised surface */
+  --sink:#dde3da;       /* recessed surface */
+  --ink:#18221d;
+  --dim:#5f6d65;
+  --hair:#c9d2c8;
+  --pine:#2f6b4f;       /* avstå, rings */
+  --pine-2:#3f8a66;
+  --pine-soft:#cfe2d4;
+  --on-pine:#f2f8f3;
+  --resin:#b8781c;      /* rewards, records, the growing ring */
+  --resin-soft:#f1dfbf;
+  --ash:#6f6660;        /* tog en: neutral, never alarming */
+  --ash-soft:#dcd7d2;
+  --ring-off:#d3dbd1;
+  --focus:#2a5bd7;
+  --font:"Familjen Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r-btn:22px; --r-sm:12px;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#0f1714; --leaf:#16211c; --sink:#1c2a23; --ink:#e6ede8; --dim:#8fa297; --hair:#26352d;
+    --pine:#5fb385; --pine-2:#77c69a; --pine-soft:#1e3a2b; --on-pine:#07170f;
+    --resin:#e3a548; --resin-soft:#3a2a12; --ash:#a59b94; --ash-soft:#25211e; --ring-off:#22302a; --focus:#8fb2ff;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#0f1714; --leaf:#16211c; --sink:#1c2a23; --ink:#e6ede8; --dim:#8fa297; --hair:#26352d;
+  --pine:#5fb385; --pine-2:#77c69a; --pine-soft:#1e3a2b; --on-pine:#07170f;
+  --resin:#e3a548; --resin-soft:#3a2a12; --ash:#a59b94; --ash-soft:#25211e; --ring-off:#22302a; --focus:#8fb2ff;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
+.num{font-variant-numeric:tabular-nums lining-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+img{max-width:100%}
+
+.wrap{max-width:460px;margin:0 auto;padding-inline:18px;padding-block:8px 56px;display:flex;flex-direction:column;gap:28px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:6px}
+.top h1{margin:0;font-size:1.25rem;font-weight:700;letter-spacing:-.01em}
+.top .sub{font-size:.85rem;color:var(--dim)}
+.iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--hair);background:var(--leaf);display:grid;place-items:center;flex:none}
+.iconbtn svg{width:19px;height:19px}
+
+/* ---- the dial: pause as tree rings ---- */
+.dial{display:grid;justify-items:center;gap:10px;margin-top:-6px}
+.rings{position:relative;width:min(100%,330px);aspect-ratio:1;max-width:100%}
+.rings svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.rings circle{fill:none}
+.rings .off{stroke:var(--ring-off)}
+.rings .done{stroke:var(--pine)}
+.rings .done.alt{stroke:var(--pine-2)}
+.rings .grow{stroke:var(--resin);stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.rings .goal{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.rings.pulse svg{animation:pulse .7s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pulse{0%{transform:scale(.96)}100%{transform:scale(1)}}
+.center{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;gap:2px;padding:28%}
+.center .what{font-size:.82rem;color:var(--dim);white-space:nowrap}
+.clock{font-size:clamp(2.5rem,13.5vw,3.5rem);font-weight:700;line-height:1;letter-spacing:-.02em;white-space:nowrap}
+.clock .d{display:inline-block;width:.6em;text-align:center}
+.clock .c{display:inline-block;width:.28em;text-align:center}
+.clock .s{color:var(--dim);font-weight:500;font-size:.52em}
+.clock .s .d{width:.6em}
+.clock.idle{font-size:1.35rem;color:var(--dim);font-weight:600}
+.center .lvl{font-size:.92rem;font-weight:600;color:var(--pine);min-height:1.3em}
+.center .lvl.none{color:var(--dim);font-weight:500}
+.next{font-size:.95rem;color:var(--dim);text-align:center;max-width:32ch}
+.next b{color:var(--ink);font-weight:600}
+
+.facts{display:grid;grid-template-columns:repeat(3,1fr);width:100%;text-align:center;gap:6px}
+.fact{display:grid;gap:1px;min-width:0;padding:2px 0}
+.fact + .fact{border-left:1px solid var(--hair)}
+.fact b{font-size:1.15rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fact span{font-size:.8rem;color:var(--dim)}
+.fact.hot b{color:var(--resin)}
+
+/* ---- buttons ---- */
+.actions{display:grid;gap:10px;margin-top:-6px}
+.big{position:relative;overflow:hidden;width:100%;border:0;border-radius:var(--r-btn);transition:transform .08s ease}
+.big:active{transform:scale(.98)}
+.big .pulse{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.big.flash .pulse{animation:flash .45s ease-out}
+@keyframes flash{0%{opacity:.35}100%{opacity:0}}
+.big.skip{background:var(--pine);color:var(--on-pine);padding:20px 22px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;text-align:left;box-shadow:0 10px 24px -12px color-mix(in oklab,var(--pine) 70%,transparent)}
+.big.skip .count{font-size:2.6rem;font-weight:700;line-height:1;min-width:1.4ch;text-align:center}
+.big.skip .what{font-size:1.3rem;font-weight:700;line-height:1.15}
+.big.skip .what small{display:block;font-size:.8rem;font-weight:500;opacity:.8}
+.big.skip .kr{font-size:1rem;font-weight:600;opacity:.9}
+.big.take{background:var(--ash-soft);color:var(--ink);padding:13px 22px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;text-align:left}
+.big.take .count{font-size:1.35rem;font-weight:700;min-width:1.4ch;text-align:center;color:var(--ash)}
+.big.take .what{font-size:1rem;font-weight:600}
+.big.take .kr{font-size:.9rem;color:var(--dim)}
+.undo{display:flex;justify-content:center}
+.undo button{background:none;border:0;color:var(--dim);font-size:.88rem;text-decoration:underline;text-underline-offset:3px;padding:6px 12px}
+.undo button:disabled{opacity:.35;text-decoration:none;cursor:default}
+
+/* ---- quiet sections ---- */
+.sec{display:grid;gap:12px;padding-top:20px;border-top:1px solid var(--hair)}
+.sec > h2{margin:0;font-size:1.05rem;font-weight:700;letter-spacing:-.005em;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sec > h2 small{font-size:.82rem;font-weight:500;color:var(--dim)}
+.muted{color:var(--dim)}
+
+.today{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.today .net{font-size:2.3rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.today .net.pos{color:var(--pine)}
+.today .row{font-size:.92rem;color:var(--dim);display:flex;gap:4px 14px;flex-wrap:wrap}
+.today .row b{color:var(--ink);font-weight:600}
+.share{display:grid;gap:6px}
+.share .bar{height:8px;border-radius:4px;background:var(--ash-soft);overflow:hidden}
+.share .bar i{display:block;height:100%;background:var(--pine);transition:width .4s ease}
+.share .lbl{display:flex;justify-content:space-between;font-size:.85rem;color:var(--dim)}
+
+.gaps svg{width:100%;height:auto;display:block}
+.gaps text{font-family:var(--font);font-size:9.5px;fill:var(--dim)}
+.gaps rect.g{fill:var(--pine)} .gaps rect.s{fill:var(--ash)} .gaps rect.live{fill:var(--resin)}
+.gaps line.goal{stroke:var(--ink);stroke-dasharray:3 3;opacity:.5}
+
+.streaks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.streak{display:grid;gap:3px;min-width:0}
+.streak b{font-size:2rem;font-weight:700;line-height:1}
+.streak span{font-size:.82rem;color:var(--dim);line-height:1.3}
+.streak.hot b{color:var(--resin)}
+
+.aw-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 6px}
+.aw{display:grid;justify-items:center;align-content:start;gap:4px;text-align:center;min-width:0}
+.aw svg{width:42px;height:42px}
+.aw svg circle{fill:none;stroke:var(--ring-off);stroke-width:1.3}
+.aw.got svg circle{stroke:var(--pine)}
+.aw.got svg circle.top{stroke:var(--resin)}
+.aw small{font-size:.8rem;font-weight:600;line-height:1.1}
+.aw:not(.got) small{color:var(--dim);font-weight:500}
+.aw em{font-style:normal;font-size:.72rem;color:var(--dim)}
+.aw .n{font-size:.72rem;font-weight:700;color:var(--resin)}
+
+.table{display:grid;grid-template-columns:1fr auto auto;gap:8px 18px;font-size:.95rem;align-items:baseline}
+.table .h{font-size:.8rem;color:var(--dim)}
+.table b{font-weight:600;text-align:right}
+.table .neg{color:var(--ash)} .table .pos{color:var(--pine)}
+
+.since{font-size:.98rem;line-height:1.5;max-width:60ch}
+.since b{font-weight:700}
+
+.chart svg{width:100%;height:auto;display:block}
+.chart text{font-family:var(--font);font-size:10px;fill:var(--dim)}
+.chart .zero{stroke:var(--hair)}
+.chart rect.p{fill:var(--pine)} .chart rect.n{fill:var(--ash)} .chart rect.cur{stroke:var(--resin);stroke-width:2}
+
+.cal .head{display:flex;justify-content:space-between;align-items:center}
+.cal .nav{display:flex;gap:6px}
+.cal .nav button{background:var(--leaf);border:1px solid var(--hair);border-radius:10px;width:36px;height:36px;color:var(--dim)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.grid .wd{text-align:center;font-size:.72rem;color:var(--dim);padding-bottom:2px}
+.cell{aspect-ratio:1;border-radius:9px;background:var(--sink);border:0;display:grid;place-items:center;font-size:.85rem;color:var(--dim);padding:0;max-width:100%}
+.cell.has{color:var(--ink);font-weight:600}
+.cell.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cell.sel{box-shadow:inset 0 0 0 2px var(--focus)}
+.cell.future{opacity:.35}
+.cell.blank{background:transparent}
+.cal .detail{font-size:.92rem;color:var(--dim);min-height:1.4em}
+.cal .detail b{color:var(--ink);font-weight:600}
+.status{font-size:.8rem;color:var(--dim);text-align:center;min-height:1.2em}
+
+/* ---- settings sheet ---- */
+.scrim{position:fixed;inset:0;background:rgba(8,14,11,.5);z-index:20;opacity:0;transition:opacity .2s}
+.scrim.on{opacity:1}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--leaf);border-radius:24px 24px 0 0;padding:12px 18px calc(22px + env(safe-area-inset-bottom,0px));max-width:520px;margin:0 auto;display:grid;gap:14px;transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);max-height:92vh;overflow:auto}
+.sheet.on{transform:none}
+.grab{width:42px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto}
+.sheet h3{margin:0;font-size:1.2rem;font-weight:700}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--sink);border-radius:var(--r-sm);padding:4px;gap:4px}
+.seg button{border:0;background:transparent;border-radius:9px;padding:10px;font-weight:600;color:var(--dim)}
+.seg button[aria-pressed="true"]{background:var(--leaf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.field{display:grid;gap:5px;min-width:0}
+.field label{font-size:.85rem;color:var(--dim);font-weight:500}
+.field input,.field select{font:inherit;padding:11px 12px;border:1px solid var(--hair);border-radius:10px;background:var(--paper);color:var(--ink);width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check{display:flex;gap:10px;align-items:center;font-size:.95rem;font-weight:500;padding:11px 12px;border:1px solid var(--hair);border-radius:10px;background:var(--paper);cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--pine);margin:0}
+.hint{margin:-6px 0 0;font-size:.82rem;color:var(--dim)}
+.derived{display:flex;justify-content:space-between;align-items:baseline;background:var(--pine-soft);border-radius:var(--r-sm);padding:11px 14px;font-size:.95rem}
+.derived b{font-size:1.3rem;font-weight:700;color:var(--pine)}
+.io{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ghost{background:none;border:1px solid var(--hair);border-radius:var(--r-sm);padding:11px 14px;color:var(--ink);font-weight:500;text-align:center}
+.filebtn{display:grid;place-items:center;cursor:pointer}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.primary{background:var(--ink);color:var(--paper);border:0;border-radius:var(--r-sm);padding:12px 22px;font-weight:700}
+.danger{color:var(--ash)}
+.confirm{background:var(--ash-soft);border-radius:var(--r-sm);padding:10px 14px;font-size:.92rem;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.confirm button{border-radius:8px;padding:7px 11px;border:1px solid currentColor;background:transparent;font-weight:600}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,16px);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:999px;font-size:.95rem;font-weight:600;opacity:0;transition:.25s;z-index:30;pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:29}
+
+@media (max-width:370px){ .aw-grid{grid-template-columns:repeat(4,1fr)} .wrap{gap:24px} }
+@media (prefers-reduced-motion: reduce){
+  .big,.rings .grow,.share .bar i,.sheet,.scrim,.toast{transition:none}
+  .big.flash .pulse,.rings.pulse svg{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="title">Snusräknaren</h1>
+      <div class="sub" id="subtitle">Laddar…</div>
+    </div>
+    <button class="iconbtn" id="openSettings" aria-label="Pris och inställningar" aria-expanded="false" aria-controls="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+    </button>
+  </header>
+
+  <section class="dial" aria-label="Pausklocka">
+    <div class="rings" id="rings">
+      <svg id="ringSvg" viewBox="0 0 320 320" aria-hidden="true"></svg>
+      <div class="center">
+        <span class="what" id="pzLabel">Pausklocka</span>
+        <div class="clock num" id="pzClock" role="timer" aria-live="off">–</div>
+        <span class="lvl none" id="pzBadgeName">Ingen ring än</span>
+      </div>
+    </div>
+    <p class="next" id="pzSub">Klockan startar vid ditt första tryck.</p>
+    <div class="facts">
+      <div class="fact" id="stBest"><b class="num" id="stBestV">–</b><span>Rekord</span></div>
+      <div class="fact" id="stGoal"><b class="num" id="stGoalV">30 min</b><span>Dagens mål</span></div>
+      <div class="fact"><b class="num" id="stWorthV">0 kr</b><span>Pausen är värd</span></div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="big skip" id="btnSkip" type="button">
+      <span class="pulse"></span>
+      <span class="count num" id="cntSkip">0</span>
+      <span class="what">Avstod<small>idag</small></span>
+      <span class="kr num" id="skipKr">+2,29 kr</span>
+    </button>
+    <button class="big take" id="btnTake" type="button">
+      <span class="pulse"></span>
+      <span class="count num" id="cntTake">0</span>
+      <span class="what" id="takeWhat">Tog en snus</span>
+      <span class="kr num" id="takeKr">−2,29 kr</span>
+    </button>
+    <div class="undo"><button type="button" id="undoBtn" disabled>Ångra senaste</button></div>
+  </div>
+
+  <section class="sec" aria-live="polite">
+    <h2>Idag <small id="planChip"></small></h2>
+    <div class="today">
+      <div class="net num" id="netToday">0 kr</div>
+      <div class="row"><span>Sparat <b class="num" id="savedToday">0 kr</b></span><span>Spenderat <b class="num" id="spentToday">0 kr</b></span></div>
+    </div>
+    <div class="share">
+      <div class="bar" aria-hidden="true"><i id="ringFill" style="width:0%"></i></div>
+      <div class="lbl"><span id="ringPct">Inga tryck än</span><span id="streakText"></span></div>
+    </div>
+    <div class="gaps">
+      <svg id="gapChart" viewBox="0 0 320 70" role="img" aria-label="Längden på dagens pauser jämfört med dagens mål"></svg>
+      <div class="lbl muted" style="font-size:.85rem" id="gapAvg"></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Streaks</h2>
+    <div class="streaks">
+      <div class="streak" id="skDays"><b class="num" id="skDaysV">0</b><span id="skDaysL">dagar i rad under din vanliga dag</span></div>
+      <div class="streak" id="skGoal"><b class="num" id="skGoalV">0</b><span>dagar i rad med dagsmålet klarat</span></div>
+      <div class="streak" id="skSkip"><b class="num" id="skSkipV">0</b><span>avstått i rad just nu</span></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Årsringar <small id="awTotal"></small></h2>
+    <div class="aw-grid" id="awGrid"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Vecka och månad</h2>
+    <div class="table">
+      <span class="h"></span><span class="h" id="weekTitle">Vecka</span><span class="h" id="monthTitle">Månad</span>
+      <span>Avstått</span><b class="num" id="wSkip">0</b><b class="num" id="mSkip">0</b>
+      <span id="wTakeLabel">Tagit</span><b class="num" id="wTake">0</b><b class="num" id="mTake">0</b>
+      <span>Netto</span><b class="num" id="wNet">0 kr</b><b class="num" id="mNet">0 kr</b>
+    </div>
+    <span id="mTakeLabel" hidden></span><i id="wBar" hidden></i><i id="mBar" hidden></i>
+    <p class="since" id="since"><b id="sinceHead">Sedan start.</b> <span id="sinceBody">Varje gång du avstår sparar du pengar.</span></p>
+  </section>
+
+  <section class="sec chart">
+    <h2>Netto per vecka <small>senaste 8</small></h2>
+    <svg id="weekChart" viewBox="0 0 320 110" role="img" aria-label="Stapeldiagram över nettobelopp per vecka"></svg>
+  </section>
+
+  <section class="sec cal">
+    <div class="head">
+      <h2 id="calTitle" style="margin:0;font-size:1.05rem">Oktober 2026</h2>
+      <div class="nav">
+        <button type="button" id="calPrev" aria-label="Föregående månad">‹</button>
+        <button type="button" id="calNext" aria-label="Nästa månad">›</button>
+      </div>
+    </div>
+    <div class="grid" id="calGrid"></div>
+    <div class="detail" id="calDetail">Tryck på en dag för detaljer.</div>
+  </section>
+
+  <div class="status" id="status"></div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="grab"></div>
+  <h3 id="sheetTitle">Vad kostar det?</h3>
+  <div class="seg" role="group" aria-label="Produkt">
+    <button type="button" id="kindSnus" aria-pressed="true">Snus</button>
+    <button type="button" id="kindCig" aria-pressed="false">Cigaretter</button>
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label for="buyUnit">Jag köper</label>
+      <select id="buyUnit">
+        <option value="single">En dosa i taget</option>
+        <option value="stock">Stock (10 dosor)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="buyPrice" id="buyPriceLabel">Pris (kr)</label>
+      <input id="buyPrice" type="number" inputmode="decimal" min="0" step="1" value="55">
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label for="perPack" id="perPackLabel">Prillor per dosa</label>
+      <input id="perPack" type="number" inputmode="numeric" min="1" step="1" value="24">
+    </div>
+    <div class="field">
+      <label for="perDay">Vanlig förbrukning per dag</label>
+      <input id="perDay" type="number" inputmode="numeric" min="1" step="1" value="12">
+    </div>
+  </div>
+  <label class="check" for="sleepMode"><input id="sleepMode" type="checkbox"> <span>Räkna inte natten i pauserna</span></label>
+  <div class="grid2" id="sleepTimes" hidden>
+    <div class="field">
+      <label for="dayStart">Dagen börjar</label>
+      <input id="dayStart" type="time" value="07:00">
+    </div>
+    <div class="field">
+      <label for="dayEnd">Kvällen slutar</label>
+      <input id="dayEnd" type="time" value="23:00">
+    </div>
+  </div>
+  <p class="hint" id="sleepHint">Pauserna räknas dygnet runt, även på natten.</p>
+  <div class="derived"><span id="derivedLabel">Pris per prilla</span><b class="num" id="derivedPrice">2,29 kr</b></div>
+  <div class="io">
+    <button type="button" class="ghost" id="exportBtn">Exportera historik</button>
+    <label class="ghost filebtn" for="importFile">Importera fil</label>
+    <input id="importFile" type="file" accept="application/json,.json" hidden>
+  </div>
+  <div class="foot">
+    <button type="button" class="ghost danger" id="resetBtn">Nollställ historik</button>
+    <button type="button" class="primary" id="saveSettings">Spara</button>
+  </div>
+  <div class="confirm" id="resetConfirm" hidden>
+    <span>Raderar alla dagar och räknare. Säker?</span>
+    <span style="display:flex;gap:8px">
+      <button type="button" id="resetNo">Avbryt</button>
+      <button type="button" id="resetYes">Ja, radera</button>
+    </span>
+  </div>
+</section>
+<div class="toast" id="toast" role="status"></div>
+<canvas id="confetti" hidden></canvas>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const LS_KEY = 'snusraknaren.v1';
+
+  const KINDS = {
+    snus: { title:'Snusräknaren', unit:'prilla', units:'prillor', pack:'dosa', packs:'dosor', stock:'Stock (10 dosor)', stockWord:'stock', take:'Tog en snus', took:'Tagit', perPack:24, perDay:12, price:55, stockSize:10 },
+    cig:  { title:'Cigg-räknaren', unit:'cigarett', units:'cigaretter', pack:'paket', packs:'paket', stock:'Limpa (10 paket)', stockWord:'limpa', take:'Rökte en', took:'Rökt', perPack:20, perDay:15, price:95, stockSize:10 }
+  };
+  const MILESTONES = [50,100,250,500,1000,2500,5000,10000];
+
+  const defaultState = () => ({
+    settings: { kind:'snus', buyUnit:'single', price:55, perPack:24, perDay:12, dayStart:'07:00', dayEnd:'23:00', sleepMode:false },
+    days: {},
+    started: null,
+    reached: []
+  });
+
+  let state = defaultState();
+  let db = null, docRef = null, saving = false, pendingSave = false;
+  let calYear, calMonth, selectedDay = null;
+
+  // ---------- helpers ----------
+  const pad = n => String(n).padStart(2,'0');
+  const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const today = () => keyOf(new Date());
+  const parseKey = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); };
+  const kr = v => {
+    const abs = Math.abs(v);
+    const s = abs >= 100 ? Math.round(abs).toLocaleString('sv-SE') : abs.toLocaleString('sv-SE',{minimumFractionDigits:abs%1?2:0, maximumFractionDigits:2});
+    return (v<0?'−':'') + s + ' kr';
+  };
+  const signed = v => (v>0?'+':'') + kr(v);
+  function isoWeek(d){
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+    return Math.ceil((((t - y0)/86400000)+1)/7);
+  }
+  function mondayOf(d){ const x = new Date(d); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+  const unitPrice = s => {
+    const K = KINDS[s.kind]; const per = Math.max(1, +s.perPack || K.perPack);
+    const price = Math.max(0, +s.price || 0);
+    return (s.buyUnit === 'stock' ? price / K.stockSize : price) / per;
+  };
+  const dayDoc = k => state.days[k] || { t:0, s:0, ev:[] };
+  const daySaved = d => d.ev.length ? d.ev.filter(e=>e.k==='s').reduce((a,e)=>a+e.p,0) : (d.saved||0);
+  const daySpent = d => d.ev.length ? d.ev.filter(e=>e.k==='t').reduce((a,e)=>a+e.p,0) : (d.spent||0);
+  const dayNet = d => daySaved(d) - daySpent(d);
+  const MONTHS = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
+  const cap = s => s.replace(/^./,c=>c.toUpperCase());
+
+  // ---------- persistence: IndexedDB on this phone (localStorage as backup) ----------
+  const IDB = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open('snusraknaren', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(db => new Promise((res, rej) => {
+      const t = db.transaction('kv', mode); const st = t.objectStore('kv'); const req = fn(st);
+      t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error);
+    }));
+    return { get: k => tx('readonly', s => s.get(k)), set: (k, v) => tx('readwrite', s => s.put(v, k)) };
+  })();
+  function mergeState(r){ const c = JSON.parse(JSON.stringify(r)); const out = Object.assign(defaultState(), c); out.settings = Object.assign(defaultState().settings, c.settings||{}); return out; }
+  function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
+  async function loadState(){
+    let fromIdb = null, fromLs = null;
+    try { fromIdb = await IDB.get('state'); } catch(e){}
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) fromLs = JSON.parse(raw); } catch(e){}
+    const count = s => s ? Object.values(s.days||{}).reduce((a,d)=>a+(d.t||0)+(d.s||0),0) : -1;
+    const pick = count(fromIdb) >= count(fromLs) ? fromIdb : fromLs;
+    if (pick) state = mergeState(pick);
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+  }
+  let saveTimer = null;
+  function persist(){
+    saveLocal();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try { await IDB.set('state', JSON.parse(JSON.stringify(state))); setStatus('Sparat'); }
+      catch(e){ setStatus('Kunde inte spara i telefonens databas, sparat i webbläsaren'); }
+    }, 150);
+  }
+  let statusTimer;
+  function setStatus(msg){ $('status').textContent = msg; clearTimeout(statusTimer); statusTimer = setTimeout(()=>{ $('status').textContent=''; }, 2000); }
+
+  // ---------- export / import ----------
+  function exportData(){
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `snusraknaren-${today()}.json`; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast('Historiken exporterad');
+  }
+  async function importData(file){
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data || typeof data !== 'object' || typeof data.days !== 'object') throw new Error('format');
+      state = mergeState(data); render(); persist(); closeSheet(); toast('Historiken importerad');
+    } catch(e){ toast('Filen gick inte att läsa. Välj en exportfil från Snusräknaren.'); }
+  }
+
+  // ---------- actions ----------
+  function tap(kind){
+    const k = today();
+    const d = dayDoc(k);
+    const p = unitPrice(state.settings);
+    d.ev.push({ k:kind, at:Date.now(), p });
+    if (kind==='t') d.t++; else d.s++;
+    state.days[k] = d;
+    if (!state.started) state.started = k;
+    const btn = kind==='t' ? $('btnTake') : $('btnSkip');
+    btn.classList.remove('flash'); void btn.offsetWidth; btn.classList.add('flash');
+    if (navigator.vibrate) { try { navigator.vibrate(kind==='s' ? [10,30,10] : 8); } catch(e){} }
+    render();
+    if (kind==='s') checkMilestones(); else gapToast();
+    persist();
+  }
+  function undo(){
+    const k = today(); const d = state.days[k]; if (!d || !d.ev.length) return;
+    const e = d.ev.pop(); if (e.k==='t') d.t = Math.max(0,d.t-1); else d.s = Math.max(0,d.s-1);
+    if (!d.t && !d.s) delete state.days[k];
+    render(); persist();
+  }
+  function totals(){
+    let t=0,s=0,saved=0,spent=0;
+    for (const k in state.days){ const d=state.days[k]; t+=d.t; s+=d.s; saved+=daySaved(d); spent+=daySpent(d); }
+    return {t,s,saved,spent,net:saved-spent};
+  }
+  function checkMilestones(){
+    const K = KINDS[state.settings.kind];
+    const all = totals();
+    state.reached = state.reached || [];
+    const per = Math.max(1, +state.settings.perPack || 1);
+    let msg = null;
+    if (!state.reached.includes('pack1') && all.s >= per){ state.reached.push('pack1'); msg = `En hel ${K.pack} som aldrig köptes.`; }
+    for (const m of MILESTONES){ const key='kr'+m; if (!state.reached.includes(key) && all.saved >= m){ state.reached.push(key); msg = `${m.toLocaleString('sv-SE')} kr sparade!`; } }
+    if (msg){ toast(msg); confetti(); }
+  }
+  function streak(){
+    const evs = [];
+    for (const k of Object.keys(state.days).sort()) { const d = state.days[k]; if (d.ev.length) evs.push(...d.ev.map(e=>({...e, day:k}))); else { for(let i=0;i<d.t;i++) evs.push({k:'t',at:0}); for(let i=0;i<d.s;i++) evs.push({k:'s',at:0}); } }
+    let n=0; for (let i=evs.length-1;i>=0 && evs[i].k==='s';i--) n++;
+    return n;
+  }
+
+  // ---------- toast + confetti ----------
+  let toastTimer;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),2800); }
+  function confetti(){
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const c = $('confetti'); c.hidden = false; c.width = innerWidth; c.height = innerHeight;
+    const ctx = c.getContext('2d'); const cols = ['#39b87c','#4bcb8d','#f2c94c','#f8f2e4','#d4785b'];
+    const ps = Array.from({length:90},()=>({x:c.width/2+(Math.random()-.5)*120,y:c.height*0.45,vx:(Math.random()-.5)*9,vy:-Math.random()*11-4,r:4+Math.random()*4,rot:Math.random()*6,vr:(Math.random()-.5)*.3,col:cols[Math.random()*cols.length|0]}));
+    let t0 = performance.now();
+    (function frame(now){
+      const dt = Math.min(32, now-t0)/16; t0 = now;
+      ctx.clearRect(0,0,c.width,c.height);
+      let alive=false;
+      for (const p of ps){ p.vy += .35*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.rot += p.vr*dt; if (p.y < c.height+20) alive=true;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.col; ctx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2); ctx.restore(); }
+      if (alive) requestAnimationFrame(frame); else c.hidden = true;
+    })(t0);
+  }
+
+
+  // ---------- pauses, levels, streaks ----------
+  const LEVELS = [
+    {m:15,n:'Frö'},{m:30,n:'Grodd'},{m:60,n:'Planta'},{m:120,n:'Kvist'},{m:180,n:'Buske'},
+    {m:240,n:'Ungträd'},{m:360,n:'Träd'},{m:480,n:'Lund'},{m:720,n:'Skog'},{m:1440,n:'Urskog'}
+  ];
+  const MIN = 60000;
+  const hm = (v, dflt) => { const x = String(v||dflt).split(':').map(Number); return (x[0]||0)*60 + (x[1]||0); };
+  const dayStartMin = () => hm(state.settings.dayStart, '07:00');
+  const dayEndMin = () => { let e = hm(state.settings.dayEnd, '23:00'); if (e <= dayStartMin()) e += 1440; return e; };
+  const wakeMinutes = () => state.settings.sleepMode ? Math.max(60, dayEndMin() - dayStartMin()) : 1440;
+  // waking milliseconds between a and b; the night (evening end → next morning) is sleep and not counted
+  function awake(a, b){
+    if (!(b > a)) return 0;
+    let total = b - a;
+    if (!state.settings.sleepMode) return total;
+    const d = new Date(a); d.setHours(0,0,0,0); d.setDate(d.getDate()-1);
+    while (d.getTime() < b){
+      const n0 = d.getTime() + dayEndMin()*MIN;
+      const nd = new Date(d); nd.setDate(nd.getDate()+1);
+      const n1 = nd.getTime() + dayStartMin()*MIN;
+      total -= Math.max(0, Math.min(b,n1) - Math.max(a,n0));
+      d.setDate(d.getDate()+1);
+    }
+    return Math.max(0,total);
+  }
+  function events(){
+    const out = [];
+    for (const k of Object.keys(state.days).sort()) for (const e of state.days[k].ev) if (e.at) out.push({k:e.k, at:e.at, day:k});
+    out.sort((x,y)=>x.at-y.at);
+    return out;
+  }
+  // completed pauses: between two "took one", measured in waking time
+  function gaps(){
+    const takes = events().filter(e=>e.k==='t'); const out = [];
+    for (let i=1;i<takes.length;i++) out.push({ day:takes[i].day, end:takes[i].at, ms:awake(takes[i-1].at, takes[i].at) });
+    return out;
+  }
+  function pauseStart(){
+    const ev = events(); const takes = ev.filter(e=>e.k==='t');
+    if (takes.length) return { at:takes[takes.length-1].at, real:true };
+    if (ev.length) return { at:ev[0].at, real:false };
+    return null;
+  }
+  const levelOf = ms => { let i=-1; LEVELS.forEach((L,j)=>{ if (ms >= L.m*MIN) i=j; }); return i; };
+  function fmtDur(ms, short){
+    const m = Math.floor(ms/MIN);
+    if (m < 60) return m + ' min';
+    const h = Math.floor(m/60), r = m%60;
+    if (h >= 48 && short) return Math.floor(h/24) + ' d ' + (h%24) + ' h';
+    return h + ' h' + (r ? ' ' + pad(r) + ' min' : '');
+  }
+  function fmtClock(ms){
+    const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), sec = t%60;
+    const dg = str => str.split('').map(ch => ch === ':' ? '<span class="c">:</span>' : `<span class="d">${ch}</span>`).join('');
+    return dg(h ? h + ':' + pad(m) : String(m)) + '<span class="s">' + dg(':' + pad(sec)) + '</span>';
+  }
+  // goal for a day: 15 % longer than the average pause over the 7 days before it
+  function goalFor(dayKey, all){
+    const end = parseKey(dayKey), start = new Date(end); start.setDate(end.getDate()-7);
+    const prior = all.filter(g => { const d = parseKey(g.day); return d >= start && d < end; });
+    if (prior.length < 3) return 30*MIN;
+    const avg = prior.reduce((a,g)=>a+g.ms,0)/prior.length;
+    return Math.max(20*MIN, Math.ceil(avg*1.15/(5*MIN))*5*MIN);
+  }
+  function dayStreaks(all, liveMs){
+    const s = state.settings, tk = today();
+    const per = Math.max(1, +s.perDay||1);
+    const under = k => { const d = state.days[k]; return d && (d.t||0) < per; };
+    const hit = k => {
+      const g = goalFor(k, all);
+      if (all.some(x => x.day===k && x.ms >= g)) return true;
+      return k===tk && liveMs >= g;
+    };
+    const run = test => {
+      let n = 0; const d = new Date(); d.setHours(0,0,0,0);
+      if (!test(keyOf(d))) d.setDate(d.getDate()-1);
+      while (test(keyOf(d))) { n++; d.setDate(d.getDate()-1); }
+      return n;
+    };
+    return { under: run(under), goal: run(hit) };
+  }
+  let liveRef = null;   // {start, lvl, recordShown, goalShown}
+  function renderPause(full){
+    const K = KINDS[state.settings.kind];
+    const ps = pauseStart(); const now = Date.now();
+    const all = gaps(); const tk = today();
+    const best = all.reduce((a,g)=>Math.max(a,g.ms),0);
+    const goal = goalFor(tk, all);
+    const live = ps ? awake(ps.at, now) : 0;
+    const lvl = levelOf(live);
+
+    $('pzLabel').textContent = ps && ps.real ? `Sedan senaste ${K.unit}` : (ps ? `Paus pågår` : `Pausklocka`);
+    const clock = $('pzClock');
+    if (!ps){ clock.textContent = 'Inte startad'; clock.classList.add('idle'); }
+    else { clock.classList.remove('idle'); clock.innerHTML = fmtClock(live); }
+
+    const next = LEVELS[lvl+1];
+    if (!ps) $('pzSub').textContent = `Klockan startar vid ditt första tryck.`;
+    else if (next) $('pzSub').innerHTML = `Nästa ring, <b>${next.n}</b>, om ${fmtDur(next.m*MIN - live + 59999)}`;
+    else $('pzSub').innerHTML = `<b>Alla tio ringar.</b> Varje minut nu är ren bonus.`;
+    drawRings(live, lvl, goal);
+    const nm = $('pzBadgeName');
+    nm.textContent = lvl >= 0 ? LEVELS[lvl].n : 'Ingen ring än';
+    nm.classList.toggle('none', lvl < 0);
+
+    $('stBestV').textContent = best ? fmtDur(Math.max(best, live), true) : (live ? fmtDur(live, true) : '–');
+    $('stBest').classList.toggle('hot', !!best && live > best);
+    $('stGoalV').textContent = fmtDur(goal);
+    $('stGoal').classList.toggle('hot', live >= goal);
+    const wakeMin = wakeMinutes();
+    const worthUnits = live / MIN / (wakeMin / Math.max(1,+state.settings.perDay||1));
+    $('stWorthV').textContent = kr(worthUnits * unitPrice(state.settings));
+
+    // live rewards (no writes: everything here is derived)
+    if (ps){
+      if (!liveRef || liveRef.start !== ps.at){ liveRef = { start:ps.at, lvl, recordShown: best>0 && live>best, goalShown: live>=goal }; }
+      else {
+        if (lvl > liveRef.lvl){ liveRef.lvl = lvl; const L = LEVELS[lvl]; toast(`Ny ring: ${L.n}. ${fmtDur(L.m*MIN)} utan.`); popBadge(); if (L.m >= 60) confetti(); buzz([12,40,12,40,24]); full = true; }
+        if (!liveRef.recordShown && best >= 10*MIN && live > best){ liveRef.recordShown = true; toast(`Nytt rekord! Längre än ${fmtDur(best)}`); confetti(); buzz([20,40,20,40,40]); full = true; }
+        if (!liveRef.goalShown && live >= goal){ liveRef.goalShown = true; toast(`Dagens mål klarat: ${fmtDur(goal)}`); popBadge(); buzz([15,30,15]); full = true; }
+      }
+    }
+    if (full) renderPauseDetails(all, goal, live, ps);
+  }
+  function popBadge(){ const b = $('rings'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+  // tree rings: one ring per level around the clock; the next ring grows in resin while you hold out
+  let ringsKey = '';
+  function drawRings(live, lvl, goal){
+    const svg = $('ringSvg'); const C = 160, R0 = 100, STEP = 6, W = 3.6;
+    const radius = i => R0 + i*STEP;
+    const key = lvl + '|' + Math.round(goal/MIN);
+    if (key !== ringsKey){
+      ringsKey = key;
+      let out = '';
+      LEVELS.forEach((L,i)=>{
+        const cls = i <= lvl ? ('done' + (i%2 ? ' alt' : '')) : 'off';
+        out += `<circle class="${cls}" cx="${C}" cy="${C}" r="${radius(i)}" stroke-width="${W}"/>`;
+      });
+      const ni = lvl + 1;
+      if (ni < LEVELS.length){
+        const r = radius(ni), len = 2*Math.PI*r;
+        out += `<circle id="growRing" class="grow" cx="${C}" cy="${C}" r="${r}" stroke-width="${W+1.4}" stroke-dasharray="${len.toFixed(2)}" stroke-dashoffset="${len.toFixed(2)}" transform="rotate(-90 ${C} ${C})"/>`;
+      }
+      // goal marker: a dot on the ring where today's goal falls
+      const gi = LEVELS.findIndex(L => goal <= L.m*MIN);
+      if (gi >= 0){
+        const lo = gi ? LEVELS[gi-1].m*MIN : 0, f = (goal-lo)/(LEVELS[gi].m*MIN-lo);
+        const a = -Math.PI/2 + f*2*Math.PI, r = radius(gi);
+        out += `<circle class="goal" cx="${(C+r*Math.cos(a)).toFixed(1)}" cy="${(C+r*Math.sin(a)).toFixed(1)}" r="4.2"><title>Dagens mål</title></circle>`;
+      }
+      svg.innerHTML = out;
+    }
+    const g = document.getElementById('growRing');
+    if (g){
+      const ni = lvl + 1, lo = lvl >= 0 ? LEVELS[lvl].m*MIN : 0, hi = LEVELS[ni].m*MIN;
+      const f = Math.max(0, Math.min(1, (live-lo)/(hi-lo)));
+      const len = 2*Math.PI*radius(ni);
+      g.setAttribute('stroke-dashoffset', (len*(1-f)).toFixed(2));
+    }
+  }
+  function buzz(p){ if (navigator.vibrate) { try { navigator.vibrate(p); } catch(e){} } }
+
+  function renderPauseDetails(all, goal, live, ps){
+    const tk = today();
+    // today's pauses chart
+    const todays = all.filter(g=>g.day===tk);
+    const bars = todays.map(g=>({ms:g.ms, live:false}));
+    if (ps) bars.push({ms:live, live:true});
+    const svg = $('gapChart'); const W=320, H=70, top=12, bottom=4; const plotH = H-top-bottom;
+    const max = Math.max(goal*1.25, ...bars.map(b=>b.ms), 1);
+    const n = Math.max(bars.length, 8); const bw = W/n;
+    let out = '';
+    bars.forEach((b,i)=>{
+      const h = Math.max(2, b.ms/max*plotH); const x = i*bw + bw*0.15;
+      out += `<rect class="${b.live?'live':(b.ms>=goal?'g':'s')}" x="${x.toFixed(1)}" y="${(H-bottom-h).toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="2"/>`;
+    });
+    const gy = (H-bottom - goal/max*plotH).toFixed(1);
+    out += `<line class="goal" x1="0" x2="${W}" y1="${gy}" y2="${gy}"/><text x="${W-2}" y="${(+gy-3).toFixed(1)}" text-anchor="end">mål ${fmtDur(goal)}</text>`;
+    if (!bars.length) out += `<text x="${W/2}" y="${H/2+8}" text-anchor="middle">Inga pauser än idag</text>`;
+    svg.innerHTML = out;
+    $('gapAvg').textContent = todays.length ? `Snitt ${fmtDur(todays.reduce((a,g)=>a+g.ms,0)/todays.length)}, ${todays.filter(g=>g.ms>=goal).length} av ${todays.length} pauser nådde målet` : '';
+
+    // streaks
+    const st = dayStreaks(all, live);
+    $('skDaysV').textContent = st.under; $('skDays').classList.toggle('hot', st.under >= 2);
+    $('skDaysL').textContent = `dagar i rad under ${state.settings.perDay} om dagen`;
+    $('skGoalV').textContent = st.goal; $('skGoal').classList.toggle('hot', st.goal >= 2);
+    const sk = streak(); $('skSkipV').textContent = sk; $('skSkip').classList.toggle('hot', sk >= 3);
+
+    // awards: highest level reached in each pause, plus the one running now
+    const counts = LEVELS.map(()=>0);
+    all.forEach(g=>{ const l = levelOf(g.ms); if (l>=0) counts[l]++; });
+    const ll = levelOf(live); if (ps && ll>=0) counts[ll]++;
+    const total = counts.reduce((a,b)=>a+b,0);
+    $('awTotal').textContent = total ? `${total} pauser med ring` : 'Första ringen efter 15 min';
+    const grid = $('awGrid'); grid.innerHTML = '';
+    LEVELS.forEach((L,i)=>{
+      let rings = '';
+      for (let k=0;k<=i;k++) rings += `<circle class="${k===i?'top':''}" cx="21" cy="21" r="${4+k*1.75}" stroke-width="1.1"/>`;
+      const el = document.createElement('div'); el.className = 'aw' + (counts[i] ? ' got' : '');
+      el.innerHTML = `<svg viewBox="0 0 42 42" aria-hidden="true">${rings}</svg><small>${L.n}</small><em>${fmtDur(L.m*MIN)}</em>${counts[i] ? `<span class="n num">${counts[i]} st</span>` : ''}`;
+      el.setAttribute('aria-label', `${L.n}, ${fmtDur(L.m*MIN)}: ${counts[i]} gånger`);
+      grid.appendChild(el);
+    });
+  }
+  function gapToast(){
+    // called right after a "took one": report the pause that just ended
+    const all = gaps(); if (!all.length) return false;
+    const g = all[all.length-1]; const prev = all.slice(0,-1);
+    const best = prev.reduce((a,x)=>Math.max(a,x.ms),0); const goal = goalFor(g.day, prev);
+    let msg = `Pausen blev ${fmtDur(g.ms)}`;
+    if (best >= 10*MIN && g.ms > best) msg += ', nytt rekord';
+    else if (g.ms >= goal) msg += `, ${fmtDur(g.ms-goal)} över målet`;
+    else msg += `. Målet är ${fmtDur(goal)}`;
+    toast(msg); return true;
+  }
+
+  // ---------- render ----------
+  function sumRange(from, to){
+    let t=0,s=0,saved=0,spent=0;
+    for (const k in state.days){ const dt = parseKey(k); if (dt>=from && dt<=to){ const d=state.days[k]; t+=d.t; s+=d.s; saved+=daySaved(d); spent+=daySpent(d);} }
+    return {t,s,saved,spent,net:saved-spent};
+  }
+  function render(){
+    const s = state.settings, K = KINDS[s.kind], up = unitPrice(s);
+    document.title = K.title;
+    $('title').textContent = K.title;
+    $('subtitle').textContent = `${kr(up)} per ${K.unit}, ${kr(up*s.perDay)} för en vanlig dag`;
+    $('takeWhat').textContent = K.take; $('wTakeLabel').textContent = K.took; $('mTakeLabel').textContent = K.took;
+    $('takeKr').textContent = '−' + kr(up); $('skipKr').textContent = '+' + kr(up);
+
+    const tk = today(), d = dayDoc(tk);
+    const net = dayNet(d);
+    const netEl = $('netToday'); netEl.textContent = signed(net); netEl.className = 'net num ' + (net>0?'pos':'');
+    $('savedToday').textContent = kr(daySaved(d)); $('spentToday').textContent = kr(daySpent(d));
+    $('cntTake').textContent = d.t; $('cntSkip').textContent = d.s;
+    $('undoBtn').disabled = !d.ev.length;
+    const total = d.t + d.s; const share = total ? d.s/total : 0;
+    $('ringFill').style.width = (share*100).toFixed(1) + '%';
+    $('ringPct').textContent = total ? `${Math.round(share*100)} % av gångerna avstod du` : 'Inga tryck än idag';
+    const st = streak();
+    $('streakText').textContent = st ? `${st} i rad` : '';
+    const left = Math.max(0, s.perDay - d.t);
+    $('planChip').textContent = d.t >= s.perDay ? `Över din vanliga dag (${s.perDay})` : `${left} av ${s.perDay} kvar mot din vanliga dag`;
+
+    const now = new Date(); const mon = mondayOf(now); const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+    const w = sumRange(mon, sun);
+    $('weekTitle').textContent = `Vecka ${isoWeek(now)}`;
+    $('wSkip').textContent = w.s; $('wTake').textContent = w.t; $('wNet').textContent = signed(w.net); $('wNet').style.color = w.net>0?'var(--pine)':w.net<0?'var(--ash)':'';
+    $('wBar').style.width = (w.s+w.t ? Math.round(100*w.s/(w.s+w.t)) : 0) + '%';
+    const m0 = new Date(now.getFullYear(), now.getMonth(), 1), m1 = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    const m = sumRange(m0, m1);
+    $('monthTitle').textContent = cap(MONTHS[now.getMonth()]);
+    $('mSkip').textContent = m.s; $('mTake').textContent = m.t; $('mNet').textContent = signed(m.net); $('mNet').style.color = m.net>0?'var(--pine)':m.net<0?'var(--ash)':'';
+    $('mBar').style.width = (m.s+m.t ? Math.round(100*m.s/(m.s+m.t)) : 0) + '%';
+
+    const keys = Object.keys(state.days).sort();
+    if (keys.length){
+      const all = totals();
+      const start = parseKey(state.started || keys[0]);
+      const days = Math.max(1, Math.floor((parseKey(tk) - start)/86400000) + 1);
+      const yearly = all.net / days * 365;
+      const packs = all.s / Math.max(1,+s.perPack||1);
+      $('sinceHead').textContent = `Sedan ${start.getDate()} ${MONTHS[start.getMonth()]}, ${days} ${days===1?'dag':'dagar'}.`;
+      $('sinceBody').innerHTML = `Avstått <b>${all.s}</b> gånger, ${K.took.toLowerCase()} <b>${all.t}</b>. Netto <b>${signed(all.net)}</b>, vilket blir <b>${signed(yearly)}</b> på ett år i samma takt${packs >= 0.5 ? `. Det motsvarar ${packs.toLocaleString('sv-SE',{maximumFractionDigits:1})} ${K.packs} som aldrig köptes` : ''}.`;
+    } else {
+      $('sinceHead').textContent = 'Sedan start.';
+      $('sinceBody').textContent = `Varje gång du avstår sparar du ${kr(up)}. Börja trycka så räknar vi.`;
+    }
+    liveRef = null;
+    renderPause(true);
+    renderWeekChart();
+    renderCalendar();
+    renderSettingsForm();
+  }
+
+  function renderWeekChart(){
+    const svg = $('weekChart'); const now = new Date(); const thisMon = mondayOf(now);
+    const weeks = [];
+    for (let i=7;i>=0;i--){ const a = new Date(thisMon); a.setDate(a.getDate()-7*i); const b = new Date(a); b.setDate(a.getDate()+6); b.setHours(23,59,59,999); weeks.push({a,b,net:sumRange(a,b).net,label:'v'+isoWeek(a)}); }
+    const max = Math.max(10, ...weeks.map(w=>Math.abs(w.net)));
+    const W=320,H=110,padL=8,padR=8,top=14,bottom=22; const plotH = H-top-bottom; const zero = top + plotH/2;
+    const bw = (W-padL-padR)/8;
+    let out = `<line class="zero" x1="${padL}" x2="${W-padR}" y1="${zero}" y2="${zero}"/>`;
+    weeks.forEach((w,i)=>{
+      const h = Math.abs(w.net)/max*(plotH/2); const x = padL + i*bw + bw*0.18; const bwid = bw*0.64;
+      const y = w.net>=0 ? zero-h : zero;
+      out += `<rect class="${w.net>=0?'p':'n'}${i===7?' cur':''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bwid.toFixed(1)}" height="${Math.max(h,w.net?1.5:0).toFixed(1)}" rx="2"/>`;
+      if (w.net) out += `<text x="${(x+bwid/2).toFixed(1)}" y="${(w.net>=0?Math.max(9,y-3):Math.min(H-bottom-3,y+h+10)).toFixed(1)}" text-anchor="middle">${w.net>0?'+':'−'}${Math.round(Math.abs(w.net))}</text>`;
+      out += `<text x="${(x+bwid/2).toFixed(1)}" y="${H-6}" text-anchor="middle">${w.label}</text>`;
+    });
+    svg.innerHTML = out;
+  }
+
+  function renderCalendar(){
+    const now = new Date();
+    if (calYear == null){ calYear = now.getFullYear(); calMonth = now.getMonth(); }
+    $('calTitle').textContent = `${cap(MONTHS[calMonth])} ${calYear}`;
+    const grid = $('calGrid'); grid.innerHTML = '';
+    ['må','ti','on','to','fr','lö','sö'].forEach(w=>{ const e=document.createElement('div'); e.className='wd'; e.textContent=w; grid.appendChild(e); });
+    const first = new Date(calYear, calMonth, 1); const lead = (first.getDay()+6)%7;
+    const nDays = new Date(calYear, calMonth+1, 0).getDate();
+    for (let i=0;i<lead;i++){ const e=document.createElement('div'); e.className='cell blank'; grid.appendChild(e); }
+    const tk = today();
+    for (let day=1; day<=nDays; day++){
+      const k = `${calYear}-${pad(calMonth+1)}-${pad(day)}`;
+      const d = state.days[k]; const b = document.createElement('button'); b.type='button'; b.className='cell'; b.textContent = day;
+      b.setAttribute('aria-label', `${day} ${MONTHS[calMonth]}`);
+      if (k === tk) b.classList.add('today');
+      if (k > tk) b.classList.add('future');
+      if (k === selectedDay) b.classList.add('sel');
+      if (d){ const tot = d.t+d.s; const share = tot ? d.s/tot : 0; b.classList.add('has');
+        const pct = Math.round(12 + share*70);
+        b.style.background = `color-mix(in oklab, var(--pine) ${pct}%, var(--sink))`;
+        b.style.color = pct > 50 ? 'var(--on-pine)' : 'var(--ink)';
+      }
+      b.addEventListener('click', ()=>{ selectedDay = k; renderCalendar(); });
+      grid.appendChild(b);
+    }
+    const det = $('calDetail');
+    if (selectedDay){
+      const dt = parseKey(selectedDay); const d = state.days[selectedDay]; const K = KINDS[state.settings.kind];
+      if (d) det.innerHTML = `${dt.getDate()} ${MONTHS[dt.getMonth()]}: avstått <b>${d.s}</b>, ${K.took.toLowerCase()} <b>${d.t}</b>, netto <b>${signed(dayNet(d))}</b>`;
+      else det.textContent = `${dt.getDate()} ${MONTHS[dt.getMonth()]}: inga tryck.`;
+    } else det.textContent = 'Tryck på en dag för detaljer.';
+  }
+  $('calPrev').addEventListener('click', ()=>{ calMonth--; if (calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
+  $('calNext').addEventListener('click', ()=>{ calMonth++; if (calMonth>11){calMonth=0;calYear++;} renderCalendar(); });
+
+  // ---------- settings sheet ----------
+  function formSettings(){
+    return {
+      kind: $('kindCig').getAttribute('aria-pressed')==='true' ? 'cig' : 'snus',
+      buyUnit: $('buyUnit').value,
+      price: +$('buyPrice').value || 0,
+      perPack: Math.max(1, +$('perPack').value || 1),
+      perDay: Math.max(1, +$('perDay').value || 1),
+      dayStart: $('dayStart').value || '07:00',
+      dayEnd: $('dayEnd').value || '23:00',
+      sleepMode: $('sleepMode').checked
+    };
+  }
+  function renderSettingsForm(){
+    const s = state.settings;
+    $('kindSnus').setAttribute('aria-pressed', s.kind==='snus'); $('kindCig').setAttribute('aria-pressed', s.kind==='cig');
+    if (document.activeElement !== $('buyUnit')) $('buyUnit').value = s.buyUnit;
+    if (document.activeElement !== $('buyPrice')) $('buyPrice').value = s.price;
+    if (document.activeElement !== $('perPack')) $('perPack').value = s.perPack;
+    if (document.activeElement !== $('perDay')) $('perDay').value = s.perDay;
+    if (document.activeElement !== $('dayStart')) $('dayStart').value = s.dayStart || '07:00';
+    if (document.activeElement !== $('dayEnd')) $('dayEnd').value = s.dayEnd || '23:00';
+    $('sleepMode').checked = !!s.sleepMode;
+    liveLabels();
+  }
+  function liveLabels(){
+    const f = formSettings(); const K = KINDS[f.kind];
+    $('buyUnit').options[0].textContent = f.kind==='snus' ? 'En dosa i taget' : 'Ett paket i taget';
+    $('buyUnit').options[1].textContent = K.stock;
+    $('perPackLabel').textContent = `${cap(K.units)} per ${K.pack}`;
+    $('buyPriceLabel').textContent = `Pris för ${f.buyUnit==='stock' ? 'en ' + K.stockWord : 'en ' + K.pack} (kr)`;
+    $('derivedLabel').textContent = `Pris per ${K.unit}`;
+    $('derivedPrice').textContent = kr(unitPrice(f));
+    $('sleepTimes').hidden = !f.sleepMode;
+    $('sleepHint').textContent = f.sleepMode ? 'Tiden mellan kväll och morgon räknas som sömn och ingår inte i pauserna.' : 'Pauserna räknas dygnet runt, även på natten.';
+  }
+  function setKind(kind){
+    const K = KINDS[kind]; const prev = formSettings().kind;
+    $('kindSnus').setAttribute('aria-pressed', kind==='snus'); $('kindCig').setAttribute('aria-pressed', kind==='cig');
+    if (kind !== prev){ $('buyPrice').value = K.price; $('perPack').value = K.perPack; $('perDay').value = K.perDay; }
+    liveLabels();
+  }
+  function openSheet(){ $('scrim').hidden=false; $('settings').hidden=false; renderSettingsForm(); $('resetConfirm').hidden=true; requestAnimationFrame(()=>{ $('scrim').classList.add('on'); $('settings').classList.add('on'); }); $('openSettings').setAttribute('aria-expanded','true'); }
+  function closeSheet(){ $('scrim').classList.remove('on'); $('settings').classList.remove('on'); $('openSettings').setAttribute('aria-expanded','false'); setTimeout(()=>{ $('scrim').hidden=true; $('settings').hidden=true; }, 260); }
+
+  $('kindSnus').addEventListener('click', ()=>setKind('snus'));
+  $('kindCig').addEventListener('click', ()=>setKind('cig'));
+  ['buyUnit','buyPrice','perPack','perDay','sleepMode','dayStart','dayEnd'].forEach(id=>$(id).addEventListener('input', liveLabels));
+  $('saveSettings').addEventListener('click', ()=>{ state.settings = formSettings(); closeSheet(); render(); persist(); toast('Pris sparat'); });
+  $('openSettings').addEventListener('click', openSheet);
+  $('scrim').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('settings').hidden) closeSheet(); });
+  $('resetBtn').addEventListener('click', ()=>{ $('resetConfirm').hidden = false; });
+  $('resetNo').addEventListener('click', ()=>{ $('resetConfirm').hidden = true; });
+  $('resetYes').addEventListener('click', ()=>{ const keep = state.settings; state = defaultState(); state.settings = keep; selectedDay=null; closeSheet(); render(); persist(); toast('Historiken är nollställd'); });
+  $('btnTake').addEventListener('click', ()=>tap('t'));
+  $('btnSkip').addEventListener('click', ()=>tap('s'));
+  $('undoBtn').addEventListener('click', undo);
+  $('exportBtn').addEventListener('click', exportData);
+  $('importFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) importData(f); e.target.value = ''; });
+
+  setInterval(()=>{ if (!document.hidden) renderPause(false); }, 1000);
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) renderPause(false); });
+
+  let lastDay = today();
+  setInterval(()=>{ if (today()!==lastDay){ lastDay = today(); render(); } }, 30000);
+
+  render();
+  loadState().then(render);
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+})();
+</script>
+</body>
+</html>
