@@ -1,5 +1,5 @@
 // Snusräknaren service worker: the app opens offline, updates in the background.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/logo.svg'];
 
 self.addEventListener('install', e => {

@@ -194,6 +194,24 @@ img{max-width:100%}
 .cell.blank{background:transparent}
 .cal .detail{font-size:.92rem;color:var(--dim);min-height:1.4em}
 .cal .detail b{color:var(--ink);font-weight:600}
+/* purchases */
+.addbuy{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:1px solid var(--hair);border-radius:16px;background:var(--leaf);font-weight:600}
+.addbuy svg{width:18px;height:18px;color:var(--resin)}
+.buylist{list-style:none;margin:0;padding:0;display:grid}
+.buylist li{display:grid;grid-template-columns:4.4em 1fr auto 44px;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid var(--hair)}
+.buylist li:first-child{border-top:1px solid var(--hair)}
+.buylist .dt{color:var(--dim);font-size:.9rem}
+.buylist b{font-weight:600}
+.buylist .x{justify-self:end;background:none;border:0;color:var(--dim);width:40px;height:40px;border-radius:50%;font-size:1.25rem;line-height:1}
+.buylist .x.arm{width:auto;padding:0 10px;height:34px;font-size:.85rem;font-weight:600;color:var(--ink);border:1px solid var(--ash);border-radius:10px;white-space:nowrap}
+.buylist li:has(.x.arm){grid-template-columns:4.4em 1fr auto auto}
+.morebtn{justify-self:start;background:none;border:0;color:var(--dim);text-decoration:underline;text-underline-offset:3px;padding:6px 0;font-size:.9rem}
+.stepper{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;border:1px solid var(--hair);border-radius:10px;background:var(--paper);overflow:hidden}
+.stepper button{height:44px;border:0;background:transparent;font-size:1.3rem;color:var(--ink)}
+.field .stepper input{border:0;border-radius:0;text-align:center;background:transparent;font:inherit;font-weight:700;width:100%;min-width:0;padding:0;color:var(--ink);-moz-appearance:textfield}
+.stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cell{position:relative}
+.cell.buy::after{content:"";position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--resin)}
 .status{font-size:.8rem;color:var(--dim);text-align:center;min-height:1.2em}
 
 /* ---- settings sheet ---- */
@@ -299,6 +317,22 @@ img{max-width:100%}
     </div>
   </section>
 
+  <section class="sec" id="buySec">
+    <h2>Inköp <small id="buyCount"></small></h2>
+    <div class="facts">
+      <div class="fact"><b class="num" id="bWeek">0 kr</b><span id="bWeekL">Denna vecka</span></div>
+      <div class="fact"><b class="num" id="bMonth">0 kr</b><span id="bMonthL">Månaden</span></div>
+      <div class="fact"><b class="num" id="bTotal">0 kr</b><span>Totalt</span></div>
+    </div>
+    <p class="muted" id="buyNote" style="margin:0;font-size:.92rem">Lägg in varje köp så ser du vad snuset faktiskt kostar.</p>
+    <button type="button" class="addbuy" id="openBuy" aria-controls="buySheet" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Lägg till köp
+    </button>
+    <ul class="buylist" id="buyList" aria-label="Dina köp"></ul>
+    <button type="button" class="morebtn" id="buyMore" hidden>Visa alla köp</button>
+  </section>
+
   <section class="sec">
     <h2>Streaks</h2>
     <div class="streaks">
@@ -320,6 +354,7 @@ img{max-width:100%}
       <span>Avstått</span><b class="num" id="wSkip">0</b><b class="num" id="mSkip">0</b>
       <span id="wTakeLabel">Tagit</span><b class="num" id="wTake">0</b><b class="num" id="mTake">0</b>
       <span>Netto</span><b class="num" id="wNet">0 kr</b><b class="num" id="mNet">0 kr</b>
+      <span>Köpt för</span><b class="num" id="wBuy">0 kr</b><b class="num" id="mBuy">0 kr</b>
     </div>
     <span id="mTakeLabel" hidden></span><i id="wBar" hidden></i><i id="mBar" hidden></i>
     <p class="since" id="since"><b id="sinceHead">Sedan start.</b> <span id="sinceBody">Varje gång du avstår sparar du pengar.</span></p>
@@ -406,6 +441,38 @@ img{max-width:100%}
     </span>
   </div>
 </section>
+<section class="sheet" id="buySheet" role="dialog" aria-modal="true" aria-labelledby="buyTitle" hidden>
+  <div class="grab"></div>
+  <h3 id="buyTitle">Lägg till köp</h3>
+  <div class="seg" role="group" aria-label="Vad köpte du">
+    <button type="button" id="buyPack" aria-pressed="true">Dosa</button>
+    <button type="button" id="buyStock" aria-pressed="false">Stock</button>
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label for="buyQty">Antal</label>
+      <div class="stepper">
+        <button type="button" id="buyMinus" aria-label="Färre">−</button>
+        <input id="buyQty" type="number" inputmode="numeric" min="1" step="1" value="1">
+        <button type="button" id="buyPlus" aria-label="Fler">+</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="buyKr">Betalade totalt (kr)</label>
+      <input id="buyKr" type="number" inputmode="decimal" min="0" step="1">
+    </div>
+  </div>
+  <div class="field">
+    <label for="buyDate">Datum</label>
+    <input id="buyDate" type="date">
+  </div>
+  <label class="check" for="buyUpdate" id="buyUpdateRow" hidden><input id="buyUpdate" type="checkbox" checked> <span id="buyUpdateText">Använd som nytt pris</span></label>
+  <div class="derived"><span id="buyPerLabel">Per prilla</span><b class="num" id="buyPer">0 kr</b></div>
+  <div class="foot">
+    <button type="button" class="ghost" id="buyCancel">Avbryt</button>
+    <button type="button" class="primary" id="buySave">Spara köp</button>
+  </div>
+</section>
 <div class="toast" id="toast" role="status"></div>
 <canvas id="confetti" hidden></canvas>
 
@@ -416,8 +483,8 @@ img{max-width:100%}
   const LS_KEY = 'snusraknaren.v1';
 
   const KINDS = {
-    snus: { title:'Snusräknaren', unit:'prilla', units:'prillor', pack:'dosa', packs:'dosor', stock:'Stock (10 dosor)', stockWord:'stock', take:'Tog en snus', took:'Tagit', perPack:24, perDay:12, price:55, stockSize:10 },
-    cig:  { title:'Cigg-räknaren', unit:'cigarett', units:'cigaretter', pack:'paket', packs:'paket', stock:'Limpa (10 paket)', stockWord:'limpa', take:'Rökte en', took:'Rökt', perPack:20, perDay:15, price:95, stockSize:10 }
+    snus: { title:'Snusräknaren', unit:'prilla', units:'prillor', pack:'dosa', packs:'dosor', stock:'Stock (10 dosor)', stockWord:'stock', stockPl:'stockar', take:'Tog en snus', took:'Tagit', perPack:24, perDay:12, price:55, stockSize:10 },
+    cig:  { title:'Cigg-räknaren', unit:'cigarett', units:'cigaretter', pack:'paket', packs:'paket', stock:'Limpa (10 paket)', stockWord:'limpa', stockPl:'limpor', take:'Rökte en', took:'Rökt', perPack:20, perDay:15, price:95, stockSize:10 }
   };
   const MILESTONES = [50,100,250,500,1000,2500,5000,10000];
 
@@ -425,7 +492,8 @@ img{max-width:100%}
     settings: { kind:'snus', buyUnit:'single', price:55, perPack:24, perDay:12, dayStart:'07:00', dayEnd:'23:00', sleepMode:false },
     days: {},
     started: null,
-    reached: []
+    reached: [],
+    purchases: []
   });
 
   let state = defaultState();
@@ -460,6 +528,7 @@ img{max-width:100%}
   const daySaved = d => d.ev.length ? d.ev.filter(e=>e.k==='s').reduce((a,e)=>a+e.p,0) : (d.saved||0);
   const daySpent = d => d.ev.length ? d.ev.filter(e=>e.k==='t').reduce((a,e)=>a+e.p,0) : (d.spent||0);
   const dayNet = d => daySaved(d) - daySpent(d);
+  const MON_SHORT = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
   const MONTHS = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
   const cap = s => s.replace(/^./,c=>c.toUpperCase());
 
@@ -810,6 +879,104 @@ img{max-width:100%}
     toast(msg); return true;
   }
 
+
+  // ---------- purchases ----------
+  const kindOf = p => KINDS[p.kind] || KINDS[state.settings.kind];
+  const packsOf = p => p.qty * (p.unit === 'stock' ? kindOf(p).stockSize : 1);
+  const unitsOf = p => packsOf(p) * Math.max(1, +p.perPack || +state.settings.perPack || 1);
+  const buyLabel = p => { const K = kindOf(p); return p.unit === 'stock' ? `${p.qty} ${p.qty === 1 ? K.stockWord : K.stockPl}` : `${p.qty} ${p.qty === 1 ? K.pack : K.packs}`; };
+  function buyRange(from, to){
+    let sum = 0, n = 0;
+    for (const p of state.purchases || []){ const d = parseKey(p.day); if (d >= from && d <= to){ sum += +p.kr || 0; n++; } }
+    return { kr: sum, n };
+  }
+  const packPriceSetting = () => { const s = state.settings, K = KINDS[s.kind]; return s.buyUnit === 'stock' ? (+s.price || 0) / K.stockSize : (+s.price || 0); };
+
+  let buyUnit = 'pack', buyKrTouched = false, showAllBuys = false, armedBuy = null, armTimer = null;
+  function buyForm(){
+    return { unit: buyUnit, qty: Math.max(1, Math.round(+$('buyQty').value || 1)), kr: Math.max(0, +$('buyKr').value || 0), day: $('buyDate').value || today() };
+  }
+  function syncBuy(){
+    const K = KINDS[state.settings.kind];
+    $('buyPack').textContent = cap(K.pack); $('buyStock').textContent = cap(K.stockWord);
+    $('buyPack').setAttribute('aria-pressed', buyUnit === 'pack'); $('buyStock').setAttribute('aria-pressed', buyUnit === 'stock');
+    const qty = Math.max(1, Math.round(+$('buyQty').value || 1));
+    const packs = qty * (buyUnit === 'stock' ? K.stockSize : 1);
+    if (!buyKrTouched) $('buyKr').value = Math.round(packPriceSetting() * packs * 100) / 100;
+    const f = buyForm(); const perPack = packs ? f.kr / packs : 0;
+    $('buyPerLabel').textContent = `Per ${K.unit}`;
+    $('buyPer').textContent = kr(perPack / Math.max(1, +state.settings.perPack || 1));
+    const differs = f.kr > 0 && Math.abs(perPack - packPriceSetting()) >= 0.5;
+    $('buyUpdateRow').hidden = !differs;
+    if (differs) $('buyUpdateText').textContent = `Använd som nytt pris, ${kr(perPack)} per ${K.pack}`;
+  }
+  function openBuy(){
+    buyUnit = state.settings.buyUnit === 'stock' ? 'stock' : 'pack';
+    $('buyQty').value = 1; $('buyDate').value = today(); $('buyDate').max = today();
+    buyKrTouched = false; $('buyUpdate').checked = true;
+    syncBuy();
+    $('scrim').hidden = false; $('buySheet').hidden = false;
+    requestAnimationFrame(()=>{ $('scrim').classList.add('on'); $('buySheet').classList.add('on'); });
+    $('openBuy').setAttribute('aria-expanded', 'true');
+  }
+  function closeBuy(){
+    $('scrim').classList.remove('on'); $('buySheet').classList.remove('on'); $('openBuy').setAttribute('aria-expanded', 'false');
+    setTimeout(()=>{ if ($('settings').hidden) $('scrim').hidden = true; $('buySheet').hidden = true; }, 260);
+  }
+  function saveBuy(){
+    const f = buyForm();
+    if (!f.kr){ toast('Fyll i vad du betalade'); $('buyKr').focus(); return; }
+    const s = state.settings, K = KINDS[s.kind];
+    state.purchases = state.purchases || [];
+    state.purchases.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), day: f.day, unit: f.unit, qty: f.qty, kr: f.kr, kind: s.kind, perPack: s.perPack });
+    if (!$('buyUpdateRow').hidden && $('buyUpdate').checked){
+      const pp = f.kr / (f.qty * (f.unit === 'stock' ? K.stockSize : 1));
+      s.price = Math.round((s.buyUnit === 'stock' ? pp * K.stockSize : pp) * 100) / 100;
+    }
+    closeBuy(); render(); persist(); toast(`Köp sparat, ${kr(f.kr)}`);
+  }
+  function deleteBuy(id){
+    state.purchases = (state.purchases || []).filter(p => p.id !== id);
+    armedBuy = null; render(); persist(); toast('Köpet är borttaget');
+  }
+  function renderBuys(){
+    const s = state.settings, K = KINDS[s.kind];
+    const list = (state.purchases || []).slice().sort((a,b) => b.day.localeCompare(a.day) || String(b.id).localeCompare(String(a.id)));
+    const now = new Date(); const mon = mondayOf(now); const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+    const m0 = new Date(now.getFullYear(), now.getMonth(), 1), m1 = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    const w = buyRange(mon, sun), m = buyRange(m0, m1);
+    const total = list.reduce((a,p) => a + (+p.kr || 0), 0);
+    $('bWeek').textContent = kr(w.kr); $('bMonth').textContent = kr(m.kr); $('bTotal').textContent = kr(total);
+    $('bWeekL').textContent = `Vecka ${isoWeek(now)}`; $('bMonthL').textContent = cap(MONTHS[now.getMonth()]);
+    $('wBuy').textContent = kr(w.kr); $('mBuy').textContent = kr(m.kr);
+    $('buyCount').textContent = list.length ? `${list.length} köp` : '';
+
+    if (!list.length){
+      $('buyNote').textContent = `Lägg in varje köp så ser du vad ${s.kind === 'snus' ? 'snuset' : 'röken'} faktiskt kostar.`;
+    } else {
+      const firstKey = list[list.length-1].day, first = parseKey(firstKey);
+      const days = Math.max(1, Math.floor((parseKey(today()) - first) / 86400000) + 1);
+      const units = list.reduce((a,p) => a + unitsOf(p), 0);
+      let taken = 0; for (const k in state.days) if (k >= firstKey) taken += state.days[k].t || 0;
+      let txt = `Köpen räcker till ${units.toLocaleString('sv-SE')} ${K.units}. Sedan första köpet har du ${K.took.toLowerCase()} ${taken} ${taken === 1 ? K.unit : K.units}.`;
+      if (days >= 7){ const perWeek = total / days * 7; txt += ` I snitt ${kr(perWeek)} i veckan, ungefär ${kr(perWeek * 52)} om året.`; }
+      $('buyNote').textContent = txt;
+    }
+
+    const ul = $('buyList'); ul.innerHTML = '';
+    const shown = showAllBuys ? list : list.slice(0, 5);
+    for (const p of shown){
+      const d = parseKey(p.day); const li = document.createElement('li');
+      const armed = armedBuy === p.id;
+      li.innerHTML = `<span class="dt">${d.getDate()} ${MON_SHORT[d.getMonth()]}</span><span>${buyLabel(p)}</span><b class="num">${kr(+p.kr || 0)}</b>`
+        + `<button type="button" class="x${armed ? ' arm' : ''}" data-id="${p.id}" aria-label="${armed ? 'Bekräfta borttagning' : 'Ta bort köpet ' + d.getDate() + ' ' + MONTHS[d.getMonth()]}">${armed ? 'Ta bort' : '×'}</button>`;
+      ul.appendChild(li);
+    }
+    const more = $('buyMore');
+    more.hidden = list.length <= 5;
+    more.textContent = showAllBuys ? 'Visa färre' : `Visa alla ${list.length} köp`;
+  }
+
   // ---------- render ----------
   function sumRange(from, to){
     let t=0,s=0,saved=0,spent=0;
@@ -857,7 +1024,7 @@ img{max-width:100%}
       const yearly = all.net / days * 365;
       const packs = all.s / Math.max(1,+s.perPack||1);
       $('sinceHead').textContent = `Sedan ${start.getDate()} ${MONTHS[start.getMonth()]}, ${days} ${days===1?'dag':'dagar'}.`;
-      $('sinceBody').innerHTML = `Avstått <b>${all.s}</b> gånger, ${K.took.toLowerCase()} <b>${all.t}</b>. Netto <b>${signed(all.net)}</b>, vilket blir <b>${signed(yearly)}</b> på ett år i samma takt${packs >= 0.5 ? `. Det motsvarar ${packs.toLocaleString('sv-SE',{maximumFractionDigits:1})} ${K.packs} som aldrig köptes` : ''}.`;
+      $('sinceBody').innerHTML = `Avstått <b>${all.s}</b> gånger, ${K.took.toLowerCase()} <b>${all.t}</b>. Netto <b>${signed(all.net)}</b>, vilket blir <b>${signed(yearly)}</b> på ett år i samma takt${packs >= 0.5 ? `. Det motsvarar ${packs.toLocaleString('sv-SE',{maximumFractionDigits:1})} ${K.packs} som aldrig köptes` : ''}.${(state.purchases||[]).length ? ` Du har köpt för <b>${kr((state.purchases||[]).reduce((a,p)=>a+(+p.kr||0),0))}</b>.` : ''}`;
     } else {
       $('sinceHead').textContent = 'Sedan start.';
       $('sinceBody').textContent = `Varje gång du avstår sparar du ${kr(up)}. Börja trycka så räknar vi.`;
@@ -866,6 +1033,7 @@ img{max-width:100%}
     renderPause(true);
     renderWeekChart();
     renderCalendar();
+    renderBuys();
     renderSettingsForm();
   }
 
@@ -909,14 +1077,16 @@ img{max-width:100%}
         b.style.background = `color-mix(in oklab, var(--pine) ${pct}%, var(--sink))`;
         b.style.color = pct > 50 ? 'var(--on-pine)' : 'var(--ink)';
       }
+      if ((state.purchases||[]).some(p => p.day === k)) b.classList.add('buy');
       b.addEventListener('click', ()=>{ selectedDay = k; renderCalendar(); });
       grid.appendChild(b);
     }
     const det = $('calDetail');
     if (selectedDay){
       const dt = parseKey(selectedDay); const d = state.days[selectedDay]; const K = KINDS[state.settings.kind];
-      if (d) det.innerHTML = `${dt.getDate()} ${MONTHS[dt.getMonth()]}: avstått <b>${d.s}</b>, ${K.took.toLowerCase()} <b>${d.t}</b>, netto <b>${signed(dayNet(d))}</b>`;
-      else det.textContent = `${dt.getDate()} ${MONTHS[dt.getMonth()]}: inga tryck.`;
+      const bk = buyRange(dt, dt).kr; const bt = bk ? `, köpt för <b>${kr(bk)}</b>` : '';
+      if (d) det.innerHTML = `${dt.getDate()} ${MONTHS[dt.getMonth()]}: avstått <b>${d.s}</b>, ${K.took.toLowerCase()} <b>${d.t}</b>, netto <b>${signed(dayNet(d))}</b>${bt}`;
+      else det.innerHTML = `${dt.getDate()} ${MONTHS[dt.getMonth()]}: inga tryck${bt}.`;
     } else det.textContent = 'Tryck på en dag för detaljer.';
   }
   $('calPrev').addEventListener('click', ()=>{ calMonth--; if (calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
@@ -972,8 +1142,25 @@ img{max-width:100%}
   ['buyUnit','buyPrice','perPack','perDay','sleepMode','dayStart','dayEnd'].forEach(id=>$(id).addEventListener('input', liveLabels));
   $('saveSettings').addEventListener('click', ()=>{ state.settings = formSettings(); closeSheet(); render(); persist(); toast('Pris sparat'); });
   $('openSettings').addEventListener('click', openSheet);
-  $('scrim').addEventListener('click', closeSheet);
-  document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('settings').hidden) closeSheet(); });
+  $('scrim').addEventListener('click', ()=>{ if (!$('settings').hidden) closeSheet(); if (!$('buySheet').hidden) closeBuy(); });
+  $('openBuy').addEventListener('click', openBuy);
+  $('buyCancel').addEventListener('click', closeBuy);
+  $('buySave').addEventListener('click', saveBuy);
+  $('buyPack').addEventListener('click', ()=>{ buyUnit = 'pack'; buyKrTouched = false; syncBuy(); });
+  $('buyStock').addEventListener('click', ()=>{ buyUnit = 'stock'; buyKrTouched = false; syncBuy(); });
+  $('buyMinus').addEventListener('click', ()=>{ $('buyQty').value = Math.max(1, (+$('buyQty').value || 1) - 1); syncBuy(); });
+  $('buyPlus').addEventListener('click', ()=>{ $('buyQty').value = Math.min(99, (+$('buyQty').value || 0) + 1); syncBuy(); });
+  $('buyQty').addEventListener('input', syncBuy);
+  $('buyKr').addEventListener('input', ()=>{ buyKrTouched = true; syncBuy(); });
+  $('buyMore').addEventListener('click', ()=>{ showAllBuys = !showAllBuys; renderBuys(); });
+  $('buyList').addEventListener('click', e => {
+    const b = e.target.closest('button.x'); if (!b) return;
+    const id = b.dataset.id;
+    if (armedBuy === id){ clearTimeout(armTimer); deleteBuy(id); return; }
+    armedBuy = id; renderBuys();
+    clearTimeout(armTimer); armTimer = setTimeout(()=>{ armedBuy = null; renderBuys(); }, 3500);
+  });
+  document.addEventListener('keydown', e=>{ if (e.key!=='Escape') return; if (!$('settings').hidden) closeSheet(); if (!$('buySheet').hidden) closeBuy(); });
   $('resetBtn').addEventListener('click', ()=>{ $('resetConfirm').hidden = false; });
   $('resetNo').addEventListener('click', ()=>{ $('resetConfirm').hidden = true; });
   $('resetYes').addEventListener('click', ()=>{ const keep = state.settings; state = defaultState(); state.settings = keep; selectedDay=null; closeSheet(); render(); persist(); toast('Historiken är nollställd'); });
